@@ -1,0 +1,10 @@
+<launch>
+
+<node pkg="falcon_tdlas" type="falcon_tdlas" name="falcon_tdlas" output="screen" >
+    <param name="port" value="/dev/ttyUSB0"/>
+    <param name="topic" value="/falcon/reading"/>
+    <param name="verbose" value="true"/>
+    <param name="frequency" value="10"/>
+</node>
+
+</launch>

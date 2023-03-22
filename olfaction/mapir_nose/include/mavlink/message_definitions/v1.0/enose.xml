@@ -1,0 +1,94 @@
+<?xml version='1.0'?>
+<mavlink>
+	<include>common.xml</include>
+	<!-- Use only message IDs from 150 to 240. All others are reserved for common.xml -->
+	<!-- eNose messages and enums, by Andres Gongora - MAPIR - University of Malaga -->
+
+
+	<!-- ENUMS - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -->
+	<enums>
+	
+		<enum name="GAS_SENSOR_TECHNOLOGY">
+			<description>Gas sensor technologies and transducer principle</description>
+			
+			<entry value="0"   name="GAS_SENSOR_TECHNOLOGY_UNKNOWN"><description></description></entry>
+			<entry value="1"   name="GAS_SENSOR_TECHNOLOGY_MOX"> <description></description></entry>
+			<entry value="2"   name="GAS_SENSOR_TECHNOLOGY_ELECTROLYTIC"> <description></description></entry>
+			<entry value="100" name="GAS_SENSOR_TECHNOLOGY_TEMPERATURE"> <description></description></entry>
+			<entry value="101" name="GAS_SENSOR_TECHNOLOGY_HUMIDITY"> <description></description></entry>
+			<entry value="255" name="GAS_SENSOR_TECHNOLOGY_NOT_VALID"> <description></description></entry>
+		</enum>
+
+		<enum name="GAS_SENSOR_MANUFACTURER">
+			<description>Gas sensor manufacturers</description>
+		
+			<entry value="0"   name="GAS_SENSOR_MANUFACTURER_UNKNOWN"> <description></description></entry>
+			<entry value="1"   name="GAS_SENSOR_MANUFACTURER_FIGARO"> <description></description></entry>
+			<entry value="2"   name="GAS_SENSOR_MANUFACTURER_ALPHA_SENSE"> <description></description></entry>
+			<entry value="3"   name="GAS_SENSOR_MANUFACTURER_SGX"> <description></description></entry>
+			<entry value="255" name="GAS_SENSOR_MANUFACTURER_NOT_VALID"> <description></description></entry>
+		</enum>
+
+		<enum name="BATTERY_CHARGER_STATUS">
+			<description>Indicates whether a charger is present, if the battery is recharging, discharging or missing</description>
+		
+			<entry value="0"   name="BATTERY_CHARGER_STATUS_UNKNOWN"> <description></description></entry>
+			<entry value="1"   name="BATTERY_CHARGER_STATUS_DISCHARGING"> <description></description></entry>
+			<entry value="2"   name="BATTERY_CHARGER_STATUS_RECHARGING"> <description></description></entry>
+			<entry value="3"   name="BATTERY_CHARGER_STATUS_BATTERY_NOT_PRESENT"> <description></description></entry>
+		</enum>
+		
+		<enum name="GAS_SENSOR_UNITS">
+			<description>Indicates whether a charger is present, if the battery is recharging, discharging or missing</description>
+		
+			<entry value="0"   name="GAS_SENSOR_UNITS_UNKNOWN"> <description></description></entry>
+			<entry value="1"   name="GAS_SENSOR_UNITS_VOLT"> <description></description></entry>
+			<entry value="2"   name="GAS_SENSOR_UNITS_AMP"> <description></description></entry>
+			<entry value="3"   name="GAS_SENSOR_UNITS_PPM"> <description></description></entry>
+			<entry value="4"   name="GAS_SENSOR_UNITS_PPB"> <description></description></entry>
+			<entry value="100" name="GAS_SENSOR_UNITS_CENTIGRADE"> <description></description></entry>
+			<entry value="101" name="GAS_SENSOR_UNITS_RELATIVEHUMIDITY"> <description></description></entry>
+			<entry value="255" name="GAS_SENSOR_UNITS_NOT_VALID"> <description></description></entry>
+		</enum>
+
+
+	</enums>
+
+
+
+
+	<!-- MESSAGES  - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -->
+	<messages>
+
+		<message id="150" name="GAS_SENSOR_MEASUREMENT">
+			<description>Gas sensor measurement</description>
+
+			<field type="uint8_t" name="technology">Sensor technology, such as MOX or Electrolytic. See enum GAS_SENSOR_TECHNOLOGY</field>
+			<field type="uint8_t" name="manufacturer">Manufacturer of the sensor. See enum GAS_SENSOR_MANUFACTURER</field>
+			<field type="uint8_t" name="mpn">Manufacturer part number</field>
+			<field type="uint8_t" name="units">Units for raw data</field>
+			<field type="float" name="raw_data">Raw measured value</field>
+			<field type="float" name="raw_zero">Zero raw measured value</field>
+			<field type="float" name="calibraiton_a">Calibration value A. 'quiet NaN' if not used</field>
+			<field type="float" name="calibraiton_b">Calibration value B. 'quiet NaN' if not used</field>
+		</message>
+
+		
+		<message id="151" name="ENOSE_STATUS">
+			<description>General module status information</description>
+			<field type="uint32_t" name="uptime">Module uptime in seconds</field>
+		</message>	
+
+		
+		<message id="152" name="BATTERY_MANAGER_STATUS">
+			<description>Specific status information for battery manager modules</description>
+			<field type="int8_t" name="battery_percentage">Remaining battery left measured in percent. -1: Information unavailable </field>
+			<field type="uint8_t" name="charger_status">See enum BATTERY_CHARGER_STATUS</field>	
+
+		</message>
+		
+
+
+	</messages>
+
+</mavlink>
