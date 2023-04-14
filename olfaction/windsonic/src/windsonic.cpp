@@ -1,40 +1,77 @@
-#include <stdlib.h>
-#include <stdio.h>
+#include <windsonic/windsonic.hpp>
 
-#include <string>
-#include <vector>
-
-#include <ros/ros.h>
-#include <serial/serial.h>
-#include <olfaction_msgs/anemometer.h>
-#include <visualization_msgs/Marker.h>
-
-#include <boost/foreach.hpp>
-#include <boost/tokenizer.hpp>
-#include <boost/algorithm/string.hpp>
-#include <angles/angles.h>
-#include <tf/transform_listener.h>
-
-using namespace std;
-
-//Globals
-ros::Publisher windmarker_pub;
-ros::Publisher wind_pub;
-std::string frame_id;
-std::vector<float> windS;
-std::vector<float> windD;
-ros::Time displayTime;
-
-
-
-struct WindMeasurement
+// MAIN
+int main(int argc, char** argv)
 {
-	char id;
-    int direction;
-    float speed;
-    char units;
-    int status;
-};
+    rclcpp::init(argc, argv);
+
+	std::shared_ptr<WindSonic> node = std::shared_ptr<WindSonic>();
+	node->run();
+    
+    return(0);
+}
+
+
+WindSonic::WindSonic() : Node("Windsonic")
+{
+
+}
+
+void WindSonic::run()
+{
+	serial::Serial my_serial;
+
+    //Get node parameters
+    
+    std::string port = declare_parameter<std::string>("port", "/dev/ttyUSB1");
+    int baudrate = declare_parameter("baud", 9600);
+    std::string frame_id = declare_parameter<std::string>("frame_id", "windsonic_link");
+    std::string topic = declare_parameter<std::string>("topic", "/wind");
+
+    RCLCPP_INFO(get_logger(), "Initializing module at port:%s:%u on frame reference:%s",port.c_str(),baudrate,frame_id.c_str());
+
+	wind_pub = create_publisher<olfaction_msgs::msg::Anemometer>(topic, 10);
+	windmarker_pub = create_publisher<visualization_msgs::msg::Marker>("Windvector_display", 100);
+
+    //Open serial port
+    try
+    {
+        my_serial.setPort(port);
+        my_serial.setBaudrate(baudrate);
+        serial::Timeout to = serial::Timeout::simpleTimeout(1000);
+        my_serial.setTimeout(to);
+        my_serial.open();
+    }
+    catch(serial::IOException &e)
+    {
+        RCLCPP_ERROR(get_logger(), "WindSonic -- Failed to open serial port!");
+        raise(SIGTRAP);
+    }
+
+    if (my_serial.isOpen())
+        RCLCPP_INFO(get_logger(), "Serial port initialized.");
+    else
+        return;
+
+    //Read Loop
+    rclcpp::Rate loop_rate(5);
+	auto shared_this = shared_from_this();
+    while(rclcpp::ok())
+    {        
+        rclcpp::spin_some(shared_this);
+
+        if(my_serial.available())
+        {
+            std::string result;
+            result = my_serial.readline(65536,"\r");
+            
+            read_anemometer(result);
+        }
+        loop_rate.sleep();
+    }
+
+    my_serial.close();
+}
 
 
 float get_average_wind_direction(std::vector<float> const &v)
@@ -62,7 +99,7 @@ float get_average_vector(std::vector<float> const &v)
     return sum/length;
 }
 
-WindMeasurement parseWindMeasurement(std::string &data)
+WindSonic::WindMeasurement WindSonic::parseWindMeasurement(std::string &data)
 {
     // WindSonic mode (default is Polar continuous)
     // format = <STX>Q, dir, speed, units, status, <ETX>\r
@@ -84,9 +121,9 @@ WindMeasurement parseWindMeasurement(std::string &data)
     // CHECK FOR MESSAGE INTEGRITY
     if (strings.size()!=6)
     {
-    	ROS_ERROR("[windsonic_node] Message could not be parsed:");
-    	for (int i=0; i<strings.size(); i++) { ROS_ERROR("%s",strings[i].c_str()); }
-		ROS_ERROR("-----");
+    	RCLCPP_ERROR(get_logger(), "[windsonic_node] Message could not be parsed:");
+    	for (int i=0; i<strings.size(); i++) { RCLCPP_ERROR(get_logger(), "%s",strings[i].c_str()); }
+		RCLCPP_ERROR(get_logger(), "-----");
 		wind.id='x';
 		return wind;
     }
@@ -140,10 +177,10 @@ WindMeasurement parseWindMeasurement(std::string &data)
 
 
 
-void read_anemometer(std::string &data)
+void WindSonic::read_anemometer(std::string &data)
 {
 	// GET WIND MEASUREMENT
-	WindMeasurement wind = parseWindMeasurement(data);
+	WindSonic::WindMeasurement wind = parseWindMeasurement(data);
 	
 
 	if(wind.id=='x'){
@@ -163,22 +200,22 @@ void read_anemometer(std::string &data)
 	{
 		wind.direction = 0;
 		wind.speed = 0.0;
-		ROS_ERROR("[windsonic] Reported invalid wind speed");
+		RCLCPP_ERROR(get_logger(), "[windsonic] Reported invalid wind speed");
 	}
 	else
 	{
 		if (wind.units == 'M' )
 		{
-			ROS_DEBUG("[windsonic] Wind speed in M/S");		
+			RCLCPP_DEBUG(get_logger(), "[windsonic] Wind speed in M/S");		
 		}
 		else if (wind.units == 'K' )
 		{
-			ROS_DEBUG("[windsonic] Wind speed in Km/h");
+			RCLCPP_DEBUG(get_logger(), "[windsonic] Wind speed in Km/h");
 			wind.speed *= 1000.0/3600.0;	
 		}
 		else
 		{
-			ROS_ERROR("[windsonic] Wind speed reported in invalid units");
+			RCLCPP_ERROR(get_logger(), "[windsonic] Wind speed reported in invalid units");
 			wind.direction = 0;
 			wind.speed = 0.0;
 		}
@@ -188,45 +225,45 @@ void read_anemometer(std::string &data)
 	// PROCESS STAUTS
 	if (wind.status != 0)
 	{
-		ROS_WARN("[windsonic] Satus = %d, wind-reading might be unrealiable", wind.status);
+		RCLCPP_WARN(get_logger(), "[windsonic] Satus = %d, wind-reading might be unrealiable", wind.status);
 	}
 	
 	
 	// VERBOSE
-	ROS_INFO("[windsonic] Speed: %f\tDirection: %d\tStatus: %d", wind.speed, wind.direction, wind.status);
+	RCLCPP_INFO(get_logger(), "[windsonic] Speed: %f\tDirection: %d\tStatus: %d", wind.speed, wind.direction, wind.status);
 	
 	
 	// CREATE OLFACTION_MSGS ANEMOMETER MESSAGE
-	olfaction_msgs::anemometer wind_msg;
+	olfaction_msgs::msg::Anemometer wind_msg;
 	
-    wind_msg.header.stamp = ros::Time::now();
+    wind_msg.header.stamp = now();
     wind_msg.header.frame_id = frame_id.c_str();
     wind_msg.sensor_label = "windSonic";
     wind_msg.wind_speed = wind.speed;
     wind_msg.wind_direction = angles::from_degrees(-wind.direction)+M_PI-M_PI/4;  //deg to rad
 
-    wind_pub.publish(wind_msg);
+    wind_pub->publish(wind_msg);
 
 	windS.push_back(wind_msg.wind_speed);
 	windD.push_back(angles::normalize_angle(wind_msg.wind_direction));
 	
-	if( (ros::Time::now() - displayTime).toSec() >= 1 ){
+	if( (now() - displayTime).seconds() >= 1 ){
 		float average_wind_direction = get_average_wind_direction(windD);
 		float average_wind_speed = get_average_vector(windS);
 
-		visualization_msgs::Marker wind_point_inv;
+		visualization_msgs::msg::Marker wind_point_inv;
 		wind_point_inv.header.frame_id = frame_id.c_str();
-		wind_point_inv.action = visualization_msgs::Marker::ADD;
+		wind_point_inv.action = visualization_msgs::msg::Marker::ADD;
 		wind_point_inv.ns = "measured_wind_inverted";
-		wind_point_inv.type = visualization_msgs::Marker::ARROW;
+		wind_point_inv.type = visualization_msgs::msg::Marker::ARROW;
 
-		wind_point_inv.header.stamp = ros::Time::now();
+		wind_point_inv.header.stamp = now();
 					wind_point_inv.points.clear();
 					wind_point_inv.id = 1;  //unique identifier for each arrow
 					wind_point_inv.pose.position.x = 0;
 					wind_point_inv.pose.position.y = 0;
 					wind_point_inv.pose.position.z = 0.0;
-					wind_point_inv.pose.orientation = tf::createQuaternionMsgFromYaw(average_wind_direction);
+					wind_point_inv.pose.orientation = tf2::toMsg(tf2::Quaternion({0,0,1}, average_wind_direction));
 					wind_point_inv.scale.x = average_wind_speed;	  //arrow lenght
 					wind_point_inv.scale.y = 0.1;	  //arrow width
 					wind_point_inv.scale.z = 0.1;	  //arrow height
@@ -234,76 +271,14 @@ void read_anemometer(std::string &data)
 					wind_point_inv.color.g = 1.0;
 					wind_point_inv.color.b = 0.0;
 					wind_point_inv.color.a = 1.0;
-		windmarker_pub.publish(wind_point_inv);
-		displayTime=ros::Time::now();
+		windmarker_pub->publish(wind_point_inv);
+		displayTime=now();
 		windD.clear();
 		windD.clear();
 	}
     
 }
 
-// MAIN
-int main(int argc, char** argv)
-{
-    ros::init(argc, argv, "windsonic_node");
-    ros::NodeHandle n;
-    ros::NodeHandle pn("~");
-    serial::Serial my_serial;
-
-    //Get node parameters
-    std::string port;
-    int baudrate;
-    std::string topic;
-    
-    pn.param<std::string>("port", port, "/dev/ttyUSB1");
-    pn.param("baud", baudrate, 9600);
-    pn.param<std::string>("frame_id", frame_id, "windsonic_link");
-    pn.param<std::string>("topic", topic, "/wind");
-
-    ROS_INFO("Initializing module at port:%s:%u on frame reference:%s",port.c_str(),baudrate,frame_id.c_str());
-
-	wind_pub = n.advertise<olfaction_msgs::anemometer>(topic, 10);
-	windmarker_pub = n.advertise<visualization_msgs::Marker>("Windvector_display", 100);
-
-    //Open serial port
-    try
-    {
-        my_serial.setPort(port);
-        my_serial.setBaudrate(baudrate);
-        serial::Timeout to = serial::Timeout::simpleTimeout(1000);
-        my_serial.setTimeout(to);
-        my_serial.open();
-    }
-    catch(serial::IOException &e)
-    {
-        ROS_ERROR_STREAM("WindSonic -- Failed to open serial port!");
-        ROS_BREAK();
-    }
-
-    if (my_serial.isOpen())
-        ROS_INFO_STREAM("Serial port initialized.");
-    else
-        return -1;
-
-    //Read Loop
-    ros::Rate loop_rate(5);
-    while(ros::ok())
-    {        
-        ros::spinOnce();
-
-        if(my_serial.available())
-        {
-            std::string result;
-            result = my_serial.readline(65536,"\r");
-            
-            read_anemometer(result);
-        }
-        loop_rate.sleep();
-    }
-
-    my_serial.close();
-    return(0);
-}
 
 
 
