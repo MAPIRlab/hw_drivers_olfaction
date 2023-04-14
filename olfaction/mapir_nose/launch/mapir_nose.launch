@@ -1,4 +1,0 @@
-<launch>
-	<node pkg="mapir_nose" name="mapir_nose" type="mapir_nose" args="/dev/ttyUSB0">
-	</node>
-</launch>
