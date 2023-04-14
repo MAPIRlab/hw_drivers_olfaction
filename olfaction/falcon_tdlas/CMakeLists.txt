@@ -9,21 +9,13 @@ set(CMAKE_CXX_FLAGS "-std=c++17 -g -O2 ${CMAKE_CXX_FLAGS}")
 
 
 ##################
-find_package(catkin REQUIRED COMPONENTS
-  olfaction_msgs
-  roscpp
-  serial
-)
-
-catkin_package()
-
+find_package(ament_cmake REQUIRED)
+find_package(rclcpp REQUIRED)
+find_package(olfaction_msgs REQUIRED)
+find_package(serial REQUIRED)
 
 ##################
-include_directories(
-    include
-    ${catkin_INCLUDE_DIRS}
-    ${serial_INCLUDE_DIRS}
-)
+include_directories(include)
 
 set(SOURCES_FILES 
 	src/falcon.cpp
@@ -32,8 +24,16 @@ set(SOURCES_FILES
 
 ##################
 add_executable(falcon_tdlas  ${SOURCES_FILES})
-add_dependencies(falcon_tdlas ${olfaction_msgs_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
 
-target_link_libraries(falcon_tdlas 
-  ${catkin_LIBRARIES}
+ament_target_dependencies(falcon_tdlas
+  rclcpp
+  olfaction_msgs
+  serial
 )
+
+install(
+  TARGETS falcon_tdlas
+  DESTINATION lib/${PROJECT_NAME}
+)
+
+ament_package()

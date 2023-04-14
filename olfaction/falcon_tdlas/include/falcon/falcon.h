@@ -1,12 +1,12 @@
 #pragma once
 
-#include <ros/ros.h>
+#include <rclcpp/rclcpp.hpp>
 #include <serial/serial.h>
-#include <olfaction_msgs/gas_sensor.h>
+#include <olfaction_msgs/msg/gas_sensor.hpp>
 #include <falcon/OutMessage.h> 
 #include <falcon/SensorReading.h>
 
-class Falcon
+class Falcon : public rclcpp::Node
 {
     public:
     Falcon();
@@ -15,8 +15,7 @@ class Falcon
     void run();
 
     private:
-    ros::NodeHandle m_nodeHandle;
-    ros::Publisher m_publisher;
+    rclcpp::Publisher<olfaction_msgs::msg::GasSensor>::SharedPtr m_publisher{nullptr};
 
     struct Settings
     {

@@ -2,22 +2,21 @@
 
 int main( int argc, char** argv)
 {
-    ros::init(argc, argv, "falcon_tdlas");
-    Falcon falcon;
+    rclcpp::init(argc, argv);
+    std::shared_ptr<Falcon> falcon = std::make_shared<Falcon>();
 
-    falcon.run();
+    falcon->run();
     return 0;
 }
 
-Falcon::Falcon()
+Falcon::Falcon() : Node("Falcon_TDLAS")
 {
-    ros::NodeHandle private_nh("~");
-    m_settings.frequency =  private_nh.param<float>("frequency", 2);
-    m_settings.port =  private_nh.param<std::string>("port", "/dev/ttyUSB0");
-    m_settings.topic =  private_nh.param<std::string>("topic", "/falcon/reading");
-    m_settings.verbose = private_nh.param<bool>("verbose", false);
+    m_settings.frequency =  declare_parameter<float>("frequency", 2);
+    m_settings.port =  declare_parameter<std::string>("port", "/dev/ttyUSB0");
+    m_settings.topic =  declare_parameter<std::string>("topic", "/falcon/reading");
+    m_settings.verbose = declare_parameter<bool>("verbose", false);
 
-    m_publisher = m_nodeHandle.advertise<olfaction_msgs::gas_sensor>(m_settings.topic, 10);
+    m_publisher = create_publisher<olfaction_msgs::msg::GasSensor>(m_settings.topic, 10);
 }
 
 void Falcon::run()
@@ -26,16 +25,17 @@ void Falcon::run()
     if(!initSerial(serial))
         return;
     
-    ros::Rate rate(m_settings.frequency);
+    rclcpp::Rate rate(m_settings.frequency);
     
-    while( !doHandShake(serial) && ros::ok())
+    while( !doHandShake(serial) && rclcpp::ok())
         rate.sleep();
 
-    
+    auto shared_this = shared_from_this();
+
     std::string bytesBuffer;
-    while(ros::ok())
+    while(rclcpp::ok())
     {
-        ros::spinOnce();
+        rclcpp::spin_some(shared_this);
 
         InMessage reading = getReading(serial);
         
@@ -62,12 +62,12 @@ bool Falcon::initSerial(serial::Serial& serial)
     }
     catch (std::exception& e)
     {
-        ROS_ERROR("[FALCON_TDLAS] %s", e.what());
+        RCLCPP_ERROR(get_logger(), "%s", e.what());
     }
 
     if(!serial.isOpen())
     {
-        ROS_ERROR("[FALCON_TDLAS] Failed to open serial port\n");
+        RCLCPP_ERROR(get_logger(), "Failed to open serial port\n");
         return false;
     }
     return true;
@@ -92,14 +92,14 @@ bool Falcon::doHandShake(serial::Serial& serial)
 
         if(!serial.waitReadable())
         {
-            ROS_INFO("[FALCON_TDLAS] Timeout - No response during handshake");
+            RCLCPP_INFO(get_logger(), "Timeout - No response during handshake");
             return false;
         }
 
         auto read = serial.read(256);
         if(read.size()==0 ||read.at(0) != MSGCodes::ACK)
         {
-            ROS_ERROR("[FALCON_TDLAS] Error during handshake! Received message did not contain an ACK: %s\n", read.c_str());
+            RCLCPP_ERROR(get_logger(), "Error during handshake! Received message did not contain an ACK: %s\n", read.c_str());
             return false;
         }
     }
@@ -119,7 +119,7 @@ bool Falcon::doHandShake(serial::Serial& serial)
 
         if(!serial.waitReadable())
         {
-            ROS_INFO("[FALCON_TDLAS] Timeout - No response during handshake");
+            RCLCPP_INFO(get_logger(), "Timeout - No response during handshake");
             return false;
         }
 
@@ -127,7 +127,7 @@ bool Falcon::doHandShake(serial::Serial& serial)
 
         if(read.size()==0 || read.at(0) != MSGCodes::ACK)
         {
-            ROS_ERROR("[FALCON_TDLAS] Error during handshake! Received message did not contain an ACK: %s\n", read.c_str());
+            RCLCPP_ERROR(get_logger(), "Error during handshake! Received message did not contain an ACK: %s\n", read.c_str());
             return false;
         }
 
@@ -150,14 +150,14 @@ InMessage Falcon::getReading(serial::Serial& serial)
 
     if(!serial.waitReadable())
     {
-        ROS_INFO("[FALCON_TDLAS] Timeout - No response to reading request");
+        RCLCPP_INFO(get_logger(), "Timeout - No response to reading request");
         return {};
     }
 
     auto read = serial.read(256);
     if(read.size()==0 || read.at(0) != MSGCodes::ACK)
     {
-        ROS_ERROR("[FALCON_TDLAS] Error getting a sensor reading! Received message did not contain an ACK: %s\n", read.c_str());
+        RCLCPP_ERROR(get_logger(), "Error getting a sensor reading! Received message did not contain an ACK: %s\n", read.c_str());
         return {};
     }
 
@@ -167,7 +167,7 @@ InMessage Falcon::getReading(serial::Serial& serial)
     }
     catch(std::exception& e)
     {
-        ROS_ERROR("[FALCON_TDLAS] Exception: %s received while trying to parse sensor reading: %s\n", e.what(), read.c_str());
+        RCLCPP_ERROR(get_logger(), "Exception: %s received while trying to parse sensor reading: %s\n", e.what(), read.c_str());
     }
     
     if(m_settings.verbose)
@@ -212,10 +212,10 @@ uint8_t OutMessage::BCC()
 
 void Falcon::publish(const InMessage& reading)
 {
-    olfaction_msgs::gas_sensor msg;
+    olfaction_msgs::msg::GasSensor msg;
     msg.technology = msg.TECH_TDLAS;
     msg.raw = reading.average_PPMxM;
-    msg.raw_units = msg.UNITS_PPMxM;
+    msg.raw_units = msg.UNITS_PPMXM;
 
-    m_publisher.publish(msg);
+    m_publisher->publish(msg);
 }
