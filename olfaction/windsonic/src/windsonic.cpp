@@ -5,7 +5,7 @@ int main(int argc, char** argv)
 {
     rclcpp::init(argc, argv);
 
-	std::shared_ptr<WindSonic> node = std::shared_ptr<WindSonic>();
+	std::shared_ptr<WindSonic> node = std::make_shared<WindSonic>();
 	node->run();
     
     return(0);
