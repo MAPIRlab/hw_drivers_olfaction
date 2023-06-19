@@ -14,9 +14,10 @@ Falcon::Falcon() : Node("Falcon_TDLAS")
     m_settings.frequency =  declare_parameter<float>("frequency", 2);
     m_settings.port =  declare_parameter<std::string>("port", "/dev/ttyUSB0");
     m_settings.topic =  declare_parameter<std::string>("topic", "/falcon/reading");
+    m_settings.frame_id =  declare_parameter<std::string>("frame_id", "falcon_link");
     m_settings.verbose = declare_parameter<bool>("verbose", false);
 
-    m_publisher = create_publisher<olfaction_msgs::msg::GasSensor>(m_settings.topic, 10);
+    m_publisher = create_publisher<olfaction_msgs::msg::TDLAS>(m_settings.topic, 10);
 }
 
 void Falcon::run()
@@ -212,10 +213,21 @@ uint8_t OutMessage::BCC()
 
 void Falcon::publish(const InMessage& reading)
 {
-    olfaction_msgs::msg::GasSensor msg;
-    msg.technology = msg.TECH_TDLAS;
-    msg.raw = reading.average_PPMxM;
-    msg.raw_units = msg.UNITS_PPMXM;
+    olfaction_msgs::msg::TDLAS msg;
+   
+    msg.header.stamp = this->get_clock()->now();
+    msg.header.frame_id = m_settings.frame_id;
 
+    // Average reading (ppmxm)
+    msg.average_ppmxm = reading.average_PPMxM;
+
+    // Raw samples
+    for (const auto &raw_s : reading.readings)
+    {
+        msg.ppmxm.push_back(raw_s.PPMxM);                                // ppm x meter
+        msg.reflection_strength.push_back(raw_s.reflectionStrength);     // no units given
+        msg.absorption_strength.push_back(raw_s.absorptionStrength);     // no units given
+    }
+    
     m_publisher->publish(msg);
 }
