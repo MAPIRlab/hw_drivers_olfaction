@@ -214,12 +214,10 @@ uint8_t OutMessage::BCC()
 void Falcon::publish(const InMessage& reading)
 {
     olfaction_msgs::msg::TDLAS msg;
-   
+
+    // Header
     msg.header.stamp = this->get_clock()->now();
     msg.header.frame_id = m_settings.frame_id;
-
-    // Average reading (ppmxm)
-    msg.average_ppmxm = reading.average_PPMxM;
 
     // Raw samples
     for (const auto &raw_s : reading.readings)
@@ -229,5 +227,10 @@ void Falcon::publish(const InMessage& reading)
         msg.absorption_strength.push_back(raw_s.absorptionStrength);     // no units given
     }
     
+    // Average values
+    msg.average_ppmxm = reading.average_PPMxM;
+    msg.average_reflection_strength = std::accumulate(msg.reflection_strength.begin(), msg.reflection_strength.end(), 0) / std::size(reading.readings);
+    msg.average_absorption_strength = std::accumulate(msg.absorption_strength.begin(), msg.absorption_strength.end(), 0) / std::size(reading.readings);
+
     m_publisher->publish(msg);
 }
