@@ -7,4 +7,5 @@
     <param name="frequency" value="10"/>
 </node>
 
+<node name="falcon_plot" pkg="rqt_plot" type="rqt_plot" args="/falcon/reading/average_ppmxp /falcon/reading/average_reflection_strength /falcon/reading/average_absorption_strength" />
 </launch>
