@@ -22,6 +22,6 @@ public:
     serial::Serial m_serial;
 
 private:
-    rclcpp::Publisher<olfaction_msgs::msg::GasSensor>::SharedPtr m_pub{nullptr};
+    rclcpp::Publisher<olfaction_msgs::msg::GasSensor>::SharedPtr m_pub{ nullptr };
     std::string m_frame_id;
 };

@@ -8,14 +8,14 @@
 
 class Falcon : public rclcpp::Node
 {
-    public:
+public:
     Falcon();
-    ~Falcon()=default;
+    ~Falcon() = default;
 
     void run();
 
-    private:
-    rclcpp::Publisher<olfaction_msgs::msg::TDLAS>::SharedPtr m_publisher{nullptr};
+private:
+    rclcpp::Publisher<olfaction_msgs::msg::TDLAS>::SharedPtr m_publisher{ nullptr };
 
     struct Settings
     {

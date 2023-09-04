@@ -1,17 +1,17 @@
 #include <senseair/senseair.hpp>
 
-int main(int argc, char** argv){
+int main(int argc, char** argv)
+{
     rclcpp::init(argc, argv);
-    
+
     std::shared_ptr<SenseAir> node = std::make_shared<SenseAir>();
-    
+
     node->run();
-    
-    return(0);
+
+    return (0);
 }
 
-SenseAir::SenseAir() : Node("Senseair"){}
-
+SenseAir::SenseAir() : Node("Senseair") {}
 
 void SenseAir::run()
 {
@@ -22,11 +22,11 @@ void SenseAir::run()
     std::string frame_id = declare_parameter<std::string>("frame_id", "/s8_link");
     std::string topic = declare_parameter<std::string>("topic", "/co2_reading");
 
-    RCLCPP_INFO(get_logger(), "Initializing module at port:%s:%u on frame reference:%s",port.c_str(),baudrate,frame_id.c_str());
+    RCLCPP_INFO(get_logger(), "Initializing module at port:%s:%u on frame reference:%s", port.c_str(), baudrate, frame_id.c_str());
 
-	auto measurement_pub = create_publisher<olfaction_msgs::msg::GasSensor>(topic, 10); 
+    auto measurement_pub = create_publisher<olfaction_msgs::msg::GasSensor>(topic, 10);
 
-    //Open serial port
+    // Open serial port
     try
     {
         my_serial.setFlowcontrol(serial::flowcontrol_none);
@@ -38,7 +38,7 @@ void SenseAir::run()
         my_serial.setTimeout(to);
         my_serial.open();
     }
-    catch(serial::IOException &e)
+    catch (serial::IOException& e)
     {
         RCLCPP_ERROR(get_logger(), "Senseair s8 -- Failed to open serial port!");
     }
@@ -48,44 +48,43 @@ void SenseAir::run()
     else
         return;
 
-    static const uint8_t readCommand[] = {0xFE, 0x04, 0x00, 0x03, 0x00, 0x01, 0xD5, 0xC5};
-    
-    //Loop
+    static const uint8_t readCommand[] = { 0xFE, 0x04, 0x00, 0x03, 0x00, 0x01, 0xD5, 0xC5 };
+
+    // Loop
     auto shared_this = shared_from_this();
     rclcpp::Rate loop_rate(0.5);
-    while(rclcpp::ok())
-    {        
+    while (rclcpp::ok())
+    {
         rclcpp::spin_some(shared_this);
 
         my_serial.flush();
-        //Request the sensor a new  reading
-        my_serial.write(readCommand,8);
+        // Request the sensor a new  reading
+        my_serial.write(readCommand, 8);
 
-        if(my_serial.available())
+        if (my_serial.available())
         {
             olfaction_msgs::msg::GasSensor sensor_msg;
             std::string result;
-            //result = my_serial.read(my_serial.available());
+            // result = my_serial.read(my_serial.available());
             result = my_serial.read(7);
 
-            //string to ppm
+            // string to ppm
             unsigned char firstByte = result[3];
             unsigned char secondByte = result[4];
             unsigned int ppm = (firstByte << 8) + secondByte;
 
             RCLCPP_INFO(get_logger(), "Read ppm: %f", ppm);
 
-            //Create msg and publish
+            // Create msg and publish
             sensor_msg.header.stamp = now();
             sensor_msg.header.frame_id = frame_id.c_str();
-            
+
             sensor_msg.raw_units = sensor_msg.UNITS_PPM;
             sensor_msg.raw_air = 0.0;
             sensor_msg.raw = ppm;
 
             measurement_pub->publish(sensor_msg);
         }
-
 
         loop_rate.sleep();
     }

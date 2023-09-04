@@ -5,7 +5,7 @@
 
 #include <olfaction_msgs/msg/gas_sensor.hpp>
 
-class SenseAir: public rclcpp::Node
+class SenseAir : public rclcpp::Node
 {
 public:
     SenseAir();

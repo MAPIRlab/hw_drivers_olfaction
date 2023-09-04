@@ -18,14 +18,14 @@ struct SingleReading
 struct InMessage
 {
     bool valid;
-    
+
     int average_PPMxM; //over the entire 0.5s interval
     std::array<SingleReading, 5> readings; //0.1s intervals
 
     InMessage(const std::string& msg)
     {
         constexpr char DELIMITER = ';';
-        std::stringstream ss (msg);
+        std::stringstream ss(msg);
         std::string buffer;
 
         std::getline(ss, buffer, DELIMITER); // FWD 1
@@ -34,14 +34,14 @@ struct InMessage
         std::getline(ss, buffer, DELIMITER);
         average_PPMxM = std::stoi(buffer);
 
-        for (int i = 0; i<5; i++)
+        for (int i = 0; i < 5; i++)
         {
             std::getline(ss, buffer, DELIMITER);
             readings[i].PPMxM = std::stoi(buffer);
 
             std::getline(ss, buffer, DELIMITER);
             readings[i].reflectionStrength = std::stof(buffer);
-            
+
             std::getline(ss, buffer, DELIMITER);
             readings[i].absorptionStrength = std::stof(buffer);
 
@@ -50,5 +50,5 @@ struct InMessage
         }
     }
 
-    InMessage() : valid(false), average_PPMxM(0){}
+    InMessage() : valid(false), average_PPMxM(0) {}
 };

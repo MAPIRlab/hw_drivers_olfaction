@@ -41,7 +41,7 @@ private:
         int status;
     };
 
-    WindMeasurement parseWindMeasurement(std::string &data);
-    void read_anemometer(std::string &data);
+    WindMeasurement parseWindMeasurement(std::string& data);
+    void read_anemometer(std::string& data);
 
 };
