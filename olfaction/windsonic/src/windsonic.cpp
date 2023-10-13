@@ -23,7 +23,7 @@ void WindSonic::run()
 
     std::string port = declare_parameter<std::string>("port", "/dev/ttyUSB1");
     int baudrate = declare_parameter("baud", 9600);
-    std::string frame_id = declare_parameter<std::string>("frame_id", "windsonic_link");
+    frame_id = declare_parameter<std::string>("frame_id", "windsonic_link");
     std::string topic = declare_parameter<std::string>("topic", "/wind");
 
     RCLCPP_INFO(get_logger(), "Initializing module at port:%s:%u on frame reference:%s", port.c_str(), baudrate, frame_id.c_str());
@@ -54,6 +54,8 @@ void WindSonic::run()
     // Read Loop
     rclcpp::Rate loop_rate(5);
     auto shared_this = shared_from_this();
+    displayTime = now();
+
     while (rclcpp::ok())
     {
         rclcpp::spin_some(shared_this);
@@ -261,7 +263,7 @@ void WindSonic::read_anemometer(std::string& data)
         wind_point_inv.pose.position.x = 0;
         wind_point_inv.pose.position.y = 0;
         wind_point_inv.pose.position.z = 0.0;
-        wind_point_inv.pose.orientation = tf2::toMsg(tf2::Quaternion({ 0, 0, 1 }, average_wind_direction));
+        wind_point_inv.pose.orientation = tf2::toMsg(tf2::Quaternion({0, 0, 1}, average_wind_direction));
         wind_point_inv.scale.x = average_wind_speed; // arrow lenght
         wind_point_inv.scale.y = 0.1;                // arrow width
         wind_point_inv.scale.z = 0.1;                // arrow height
