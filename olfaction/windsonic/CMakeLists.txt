@@ -33,9 +33,17 @@ ament_target_dependencies(windsonic_node
   visualization_msgs
 )
 
+add_executable(windsonicID src/identifier.cpp)
+ament_target_dependencies(windsonicID serial)
+
 install(
-  TARGETS windsonic_node
+  TARGETS windsonic_node windsonicID
   DESTINATION lib/${PROJECT_NAME}
+)
+
+install(
+    FILES resources/10-windsonic.rules
+    DESTINATION share/${PROJECT_NAME}
 )
 
 ament_package()
