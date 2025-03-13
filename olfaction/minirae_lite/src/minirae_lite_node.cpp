@@ -30,6 +30,7 @@ MiniraeLite::MiniraeLite() : Node("Minirae_lite"), m_rate(20)
 
     RCLCPP_INFO(get_logger(), "Initializing module at port:%s:%u on frame reference:%s", port.c_str(), baudrate, m_frame_id.c_str());
     m_pub = create_publisher<olfaction_msgs::msg::GasSensor>(topic_name, 10);
+    RCLCPP_INFO(get_logger(), "Publishing on topic '%s'", m_pub->get_topic_name());
 
     // Open serial port
     try
@@ -52,32 +53,39 @@ MiniraeLite::MiniraeLite() : Node("Minirae_lite"), m_rate(20)
 
 void MiniraeLite::update()
 {
-    m_serial.flush();
-    // Request the PID a new  reading
-    m_serial.write("R");
-    if (m_serial.available())
+    try
     {
-        olfaction_msgs::msg::GasSensor sensor_msg;
-        std::string result;
-        // result = m_serial.read(m_serial.available());
-        result = m_serial.readline(500, "\r");
-        // RCLCPP_INFO(get_logger(), "Read string:" << result);
-        // string to ppm
-        float ppm = atof(result.c_str()) / 1000;
+        m_serial.flush();
+        // Request the PID a new  reading
+        m_serial.write("R");
+        if (m_serial.available())
+        {
+            olfaction_msgs::msg::GasSensor sensor_msg;
+            std::string result;
+            // result = m_serial.read(m_serial.available());
+            result = m_serial.readline(500, "\r");
+            // RCLCPP_INFO(get_logger(), "Read string:" << result);
+            // string to ppm
+            float ppm = atof(result.c_str()) / 1000;
 
-        // RCLCPP_INFO(get_logger(), "Read ppm:" << ppm);
+            // RCLCPP_INFO(get_logger(), "Read ppm: %.2f", ppm);
 
-        // Create msg and publish
-        sensor_msg.header.stamp = now();
-        sensor_msg.header.frame_id = m_frame_id.c_str();
+            // Create msg and publish
+            sensor_msg.header.stamp = now();
+            sensor_msg.header.frame_id = m_frame_id.c_str();
 
-        sensor_msg.technology = sensor_msg.TECH_PID;
-        sensor_msg.manufacturer = sensor_msg.MANU_RAE;
-        sensor_msg.mpn = sensor_msg.MPN_MINIRAELITE;
-        sensor_msg.raw_units = sensor_msg.UNITS_PPM;
-        sensor_msg.raw_air = 0.0;
-        sensor_msg.raw = ppm;
+            sensor_msg.technology = sensor_msg.TECH_PID;
+            sensor_msg.manufacturer = sensor_msg.MANU_RAE;
+            sensor_msg.mpn = sensor_msg.MPN_MINIRAELITE;
+            sensor_msg.raw_units = sensor_msg.UNITS_PPM;
+            sensor_msg.raw_air = 0.0;
+            sensor_msg.raw = ppm;
 
-        m_pub->publish(sensor_msg);
+            m_pub->publish(sensor_msg);
+        }
+    }
+    catch(const std::exception& e)
+    {
+        RCLCPP_ERROR(get_logger(), "Exception: '%s'", e.what());
     }
 }
