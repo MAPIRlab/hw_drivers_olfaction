@@ -23,9 +23,19 @@ ament_target_dependencies(minirae_lite_node
   serial  
 )
 
+add_executable(miniraeLiteID src/identifier.cpp)
+ament_target_dependencies(miniraeLiteID serial)
+
+
 install(
-  TARGETS minirae_lite_node
+  TARGETS minirae_lite_node miniraeLiteID
   DESTINATION lib/${PROJECT_NAME}
+)
+
+
+install(
+    FILES resources/10-minirae_lite.rules
+    DESTINATION share/${PROJECT_NAME}
 )
 
 ament_package()

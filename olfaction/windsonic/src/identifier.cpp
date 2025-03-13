@@ -60,19 +60,21 @@ int main(int argc, char** argv)
         return 3;
     }
 
+    for(int i = 0; i < 5; i++)
+    {
+        std::string result;
+        result = my_serial.readline(65536, "\r");
     
-    sleep(5);
-    std::string result;
-    result = my_serial.readline(65536, "\r");
+        if(verifyReading(result))
+        {
+            printf("0");
+            return 0;
+        }
+        else
+            continue;
 
-    if(verifyReading(result))
-    {
-        printf("0");
-        return 0;
+        sleep(1);
     }
-    else
-    {
-        printf("1");
-        return 4;
-    }   
+    printf("1");
+    return 4;
 }
